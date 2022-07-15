@@ -50,25 +50,25 @@ class db_manager:
         self.cur.execute('''INSERT INTO users
                             VALUES (?,
                             ?)''', (user, email))
+        return 'Successfully created user'
     
     def create_account(self, account_name, user, initial_balance):
         # Check if user exists
-        exists = self.cur.execute("SELECT COUNT(*) FROM users WHERE user=:user", {'user': user}).fetchone()[0]
-        if exists == 0:
+        if not bool(self.cur.execute("SELECT COUNT(*) FROM users WHERE user=:user", {'user': user}).fetchone()[0]):
             return NameError('This user does not exist in the database.')
         # In the future, add checks to see if the arguments account_name, user and initial balance are appropriate
-
         else:
             self.cur.execute('''INSERT INTO accounts
                                 VALUES (?,
                                 ?,
                                 ?)''', (account_name, user, initial_balance))
+            return 'Successfully created account'
 
 
 # Testing ground (while I don't get a handle on pytest)
 manager = db_manager()
 manager.create_user('David', 'myemail@email.com')
-manager.create_account('Mybank', 'David', 50)
+print(manager.create_account('Mybank', 'David', 50))
 
 for row in manager.cur.execute('SELECT * FROM users'):
     print(row)
