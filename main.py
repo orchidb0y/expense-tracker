@@ -60,6 +60,8 @@ class db_manager:
             return ValueError('Entered invalid email')
         elif len(user) > 10 or len(email) > 20:
             return ValueError('User/email entered is too long (max of 10 char for user and 30 char for email')
+        elif bool(self.cur.execute("SELECT COUNT(*) FROM users WHERE user=:user", {'user': user}).fetchone()[0]):
+            return NameError('User already exists in database')
         self.cur.execute('''INSERT INTO users
                             VALUES (?,
                             ?)''', (user, email))
@@ -75,6 +77,8 @@ class db_manager:
             return ValueError('Entered account name is too long')
         elif not isfloat(initial_balance):
             return ValueError('Entered initial balance is not valid (only accepts integers or floats)')
+        elif bool(self.cur.execute("SELECT COUNT(*) FROM accounts WHERE account=:account", {'account': account_name}).fetchone()[0]):
+            return NameError('Account already exists in database')
         else:
             self.cur.execute('''INSERT INTO accounts
                                 VALUES (?,
