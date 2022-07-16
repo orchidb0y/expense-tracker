@@ -20,6 +20,11 @@ class db_manager:
         # Check if the database exists, creates it if not
         if not exists('db.sqlite'):
             open('db.sqlite', 'x')
+        # Check if currentid save file exists, creates it if not (and sets first current_id as 0)
+        if not exists('currentid.txt'):
+            open('currentid.txt', 'x')
+            with open('currentid.txt', 'w') as id_file:
+                id_file.write('0')
         
         self.con = sql.connect('db.sqlite')
         self.cur = self.con.cursor()
@@ -28,18 +33,17 @@ class db_manager:
 
         # Check if expense table exists, creates it if not
         for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='expenses'"):
-            print(table) # debug print
             if table[0] == 0:
                 self.cur.execute('''CREATE TABLE expenses
                                     (id INTEGER PRIMARY KEY,
-                                    establishment VARCHAR(20),
+                                    establishment VARCHAR(10),
                                     account VARCHAR(10),
+                                    expense REAL,
                                     year INTEGER,
                                     month INTEGER,
                                     day INTEGER)''')
         # Check if accounts table exists, creates it if not
         for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='accounts'"):
-            print(table) # debug print
             if table[0] == 0:
                 self.cur.execute('''CREATE TABLE accounts
                                     (account VARCHAR(10) PRIMARY KEY,
@@ -47,7 +51,6 @@ class db_manager:
                                     balance MONEY)''')
         # Check if users table exists, creates it if not
         for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='users'"):
-            print(table) # debug print
             if table[0] == 0:
                 self.cur.execute('''CREATE TABLE users
                                     (user VARCHAR(10) PRIMARY KEY,
@@ -85,15 +88,28 @@ class db_manager:
                                 ?,
                                 ?)''', (account_name, user, initial_balance))
             return 'Successfully created account'
-
-
-# Testing ground (while I don't get a handle on pytest)
-manager = db_manager()
-print(manager.create_user('David', 'myemail@email.com'))
-print(manager.create_account('Bank', 'David', 50))
-
-for row in manager.cur.execute('SELECT * FROM users'):
-    print(row)
-
-for row in manager.cur.execute('SELECT * FROM accounts'):
-    print(row)
+    
+    def create_expense(self, establishment, account, expense, year, month, day):
+        if establishment.isnumeric():
+            return ValueError('Establishment name cannot be numeric')
+        elif len(establishment) > 10:
+            return ValueError('Entered establishment name is too long')
+        elif not bool(self.cur.execute("SELECT COUNT(*) FROM accounts WHERE account=:account", {'account': account}).fetchone()[0]):
+            return NameError('Entered account does not exist in the database')
+        elif (len(str(year)) < 4 or year < 2021) or (month > 12 or month < 1) or (day > 31 or day < 0):
+            return ValueError('Entered date is invalid')
+        else:
+            file = open('currentid.txt')
+            current_id = int(file.readline())
+            current_id += 1
+            self.cur.execute('''INSERT INTO expenses
+                                VALUES (?,
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+                                ?,
+                                ?)''', (current_id, establishment, account, expense, year, month, day))
+            file = open('currentid.txt', 'w')
+            file.write(str(current_id))
+            return ('Succesfully created expense and wrote to currentid')
