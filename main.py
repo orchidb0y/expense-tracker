@@ -35,9 +35,9 @@ class db_manager:
         for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='expenses'"):
             if table[0] == 0:
                 self.cur.execute('''CREATE TABLE expenses
-                                    (id INTEGER PRIMARY KEY,
-                                    establishment VARCHAR(10),
-                                    account VARCHAR(10),
+                                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    establishment_id INTEGER REFERENCES establishments(id),
+                                    account_id INTEGER REFERENCES accounts(id),
                                     expense REAL,
                                     year INTEGER,
                                     month INTEGER,
@@ -46,15 +46,23 @@ class db_manager:
         for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='accounts'"):
             if table[0] == 0:
                 self.cur.execute('''CREATE TABLE accounts
-                                    (account VARCHAR(10) PRIMARY KEY,
-                                    user VARCHAR(10),
+                                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    account VARCHAR(10),
+                                    user_id INTEGER REFERENCES users(id),
                                     balance MONEY)''')
         # Check if users table exists, creates it if not
         for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='users'"):
             if table[0] == 0:
                 self.cur.execute('''CREATE TABLE users
-                                    (user VARCHAR(10) PRIMARY KEY,
+                                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    user VARCHAR(10),
                                     email VARCHAR(20))''')
+        # Check if establishments table exists, creates it if not
+        for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='establishments'"):
+            if table[0] == 0:
+                self.cur.execute('''CREATE TABLE establishments
+                                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    establishment VARCHAR(15))''')
 
     def create_user(self, user, email):
         if user.isnumeric() or email.isnumeric():
@@ -71,7 +79,6 @@ class db_manager:
         return 'Successfully created user'
     
     def create_account(self, account_name, user, initial_balance):
-        # Check if user exists
         if not bool(self.cur.execute("SELECT COUNT(*) FROM users WHERE user=:user", {'user': user}).fetchone()[0]):
             return NameError('Entered user does not exist in the database')
         elif account_name.isnumeric():
