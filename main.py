@@ -31,6 +31,19 @@ class db_manager:
         self.current_date = date.today().strftime('%d/%m/%y') # Maybe deprecated
         self.current_expense_id = 0
 
+        # Check if establishments table exists, creates it if not
+        for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='establishments'"):
+            if table[0] == 0:
+                self.cur.execute('''CREATE TABLE establishments
+                                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    establishment VARCHAR(15))''')
+        # Check if users table exists, creates it if not
+        for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='users'"):
+            if table[0] == 0:
+                self.cur.execute('''CREATE TABLE users
+                                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    user VARCHAR(10),
+                                    email VARCHAR(20))''')
         # Check if expense table exists, creates it if not
         for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='expenses'"):
             if table[0] == 0:
@@ -50,19 +63,6 @@ class db_manager:
                                     account VARCHAR(10),
                                     user_id INTEGER REFERENCES users(id),
                                     balance MONEY)''')
-        # Check if users table exists, creates it if not
-        for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='users'"):
-            if table[0] == 0:
-                self.cur.execute('''CREATE TABLE users
-                                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                    user VARCHAR(10),
-                                    email VARCHAR(20))''')
-        # Check if establishments table exists, creates it if not
-        for table in self.cur.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='establishments'"):
-            if table[0] == 0:
-                self.cur.execute('''CREATE TABLE establishments
-                                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                    establishment VARCHAR(15))''')
 
     def create_user(self, user, email):
         if user.isnumeric() or email.isnumeric():
@@ -73,7 +73,7 @@ class db_manager:
             return ValueError('User/email entered is too long (max of 10 char for user and 30 char for email')
         elif bool(self.cur.execute("SELECT COUNT(*) FROM users WHERE user=:user", {'user': user}).fetchone()[0]):
             return NameError('User already exists in database')
-        self.cur.execute('''INSERT INTO users
+        self.cur.execute('''INSERT INTO users (user, email)
                             VALUES (?,
                             ?)''', (user, email))
         return 'Successfully created user'
@@ -90,10 +90,12 @@ class db_manager:
         elif bool(self.cur.execute("SELECT COUNT(*) FROM accounts WHERE account=:account", {'account': account_name}).fetchone()[0]):
             return NameError('Account already exists in database')
         else:
-            self.cur.execute('''INSERT INTO accounts
+            user_id = self.cur.execute("SELECT user_id FROM users WHERE user=:user", {'user': user}).fetchone()[0]
+            print(user_id)
+            self.cur.execute('''INSERT INTO accounts (account, user_id, balance))
                                 VALUES (?,
                                 ?,
-                                ?)''', (account_name, user, initial_balance))
+                                ?)''', (account_name, user_id, initial_balance))
             return 'Successfully created account'
     
     def create_expense(self, establishment, account, expense, year, month, day):
@@ -120,3 +122,8 @@ class db_manager:
             file = open('currentid.txt', 'w')
             file.write(str(current_id))
             return ('Succesfully created expense and wrote to currentid')
+
+manager = db_manager()
+manager.create_user('David', 'davidsobral@me.com')
+print(manager.cur.execute("SELECT id FROM users WHERE user='David'").fetchone()[0])
+manager.create_account('Bank', 'David', 100)
