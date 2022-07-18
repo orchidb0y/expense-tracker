@@ -1,1 +1,5 @@
+test*
+.pytest*
 __pycache__
+db.sqlite
+currentid.txt
